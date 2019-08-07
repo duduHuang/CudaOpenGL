@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="convertToP210.cu" />
+    <CudaCompile Include="convertToRGB.cu" />
+    <CudaCompile Include="resize.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="convertTool.cpp" />
+    <ClCompile Include="nvGL.cpp" />
+    <ClCompile Include="writeFile.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="convertToP210.h" />
+    <ClInclude Include="convertToRGB.h" />
+    <ClInclude Include="convertTool.h" />
+    <ClInclude Include="nvGL.h" />
+    <ClInclude Include="resize.h" />
+    <ClInclude Include="writeFile.h" />
+  </ItemGroup>
+</Project>
