@@ -36,14 +36,12 @@
 #include <iostream>
 
 // Shared Library Test Functions
-#define MAX_EPSILON 10
 #define REFRESH_DELAY     10 //ms
 
 using namespace std;
 
 // Forward declarations
 void runStdProgram(int argc, char **argv, unsigned char *disData, int nWidth, int nHeight, int nBytes);
-void FreeResource();
 void Cleanup(int iExitCode);
 
 #endif // !__H_NVGL__
