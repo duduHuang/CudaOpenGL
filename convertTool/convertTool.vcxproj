@@ -17,16 +17,17 @@
     <ClCompile Include="writeFile.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="convertToP210.h" />
+    <ClInclude Include="convertToP208.h" />
     <ClInclude Include="convertToRGB.h" />
     <ClInclude Include="convertTool.h" />
     <ClInclude Include="mapToGL.h" />
     <ClInclude Include="nvGL.h" />
+    <ClInclude Include="nvjpeg.h" />
     <ClInclude Include="resize.h" />
     <ClInclude Include="writeFile.h" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="convertToP210.cu" />
+    <CudaCompile Include="convertToP208.cu" />
     <CudaCompile Include="convertToRGB.cu" />
     <CudaCompile Include="mapToGL.cu" />
     <CudaCompile Include="resize.cu" />

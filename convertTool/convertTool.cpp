@@ -1,9 +1,16 @@
 #include "convertTool.h"
-#include "convertToP210.h"
+#include "convertToP208.h"
 #include "convertToRGB.h"
 #include "resize.h"
 #include "writeFile.h"
+#ifdef WIN32
 #include "nvGL.h"
+#endif // !WIN32
+#ifndef WIN32
+// if not define function, it will build failed on linux system,
+void runStdProgram(int argc, char **argv, unsigned char *disData, int nWidth, int nHeight, int nBytes);
+#endif // !WIN32
+
 
 static const char *sSyncMethod[] = {
     "0 (Automatic Blocking)",
@@ -23,34 +30,32 @@ const char *sDeviceSyncMethod[] = {
     NULL
 };
 
-int parseCmdLine(int argc, char *argv[], nv210_context_t *g_ctx) {
+int parseCmdLine(nv210_context_t *g_ctx) {
     int w = 1280, h = 720;
     string s;
-    //if (argc == 3) {
-        // Run using default arguments
-        g_ctx->input_v210_file = "v210.yuv";
-        if (g_ctx->input_v210_file == NULL) {
-            cout << "Cannot find input file" << argv[1] << "\n Exiting\n";
-            return -1;
-        }
-        g_ctx->img_width = 7680;
-        g_ctx->img_rowByte = (7680 + 47) / 48 * 128 / 2;
-        g_ctx->img_height = 4320;
-        g_ctx->batch = 1;
-        cout << "Output resolution: (7680 4320)\n"
-            << "                   (3840 2160)\n"
-            << "                   (1920 1080)\n"
-            << "                   default (1280 720) ";
-        getline(cin, s);
-        if (!s.empty()) {
-            istringstream ss(s);
-            ss >> w >> h;
-        }
-        g_ctx->dst_width = w;
-        g_ctx->dst_height = h;
-    //}
+    // Run using default arguments
+    g_ctx->input_v210_file = "v210.yuv";
+    if (g_ctx->input_v210_file == NULL) {
+        cout << "Cannot find input file\n Exiting\n";
+        return -1;
+    }
+    g_ctx->img_width = 7680;
+    g_ctx->img_rowByte = (7680 + 47) / 48 * 128 / 2;
+    g_ctx->img_height = 4320;
+    g_ctx->batch = 1;
+    cout << "Output resolution: (7680 4320)\n"
+        << "                   (3840 2160)\n"
+        << "                   (1920 1080)\n"
+        << "                   default (1280 720) ";
+    getline(cin, s);
+    if (!s.empty()) {
+        istringstream ss(s);
+        ss >> w >> h;
+    }
+    g_ctx->dst_width = w;
+    g_ctx->dst_height = h;
     if (g_ctx->img_width == 0 || g_ctx->img_height == 0 || !g_ctx->input_v210_file) {
-        cout << "Usage: " << argv[0] << " inputf outputf\n";
+        cout << "Error: inputf outputf\n";
         return EXIT_FAILURE;
     }
     return EXIT_SUCCESS;
@@ -73,15 +78,24 @@ static int loadV210Frame(unsigned short *dSrc, nv210_context_t *g_ctx) {
 }
 
 void ConverterTool::lookupTableF() {
+    lookupTable = new int[1024];
+
+    cudaStatus = cudaMalloc((void**)&lookupTable_cuda, sizeof(int) * 1024);
+    if (cudaStatus != cudaSuccess) {
+        cerr << "lookupTable_cuda cudaMalloc failed!\n";
+        freeMemory();
+        return;
+    }
+
     for (int i = 0; i < 1024; ++i) {
         lookupTable[i] = round(i * 0.249);
     }
     checkCudaErrors(cudaMemcpy(lookupTable_cuda, lookupTable, sizeof(int) * 1024, cudaMemcpyHostToDevice));
 }
 
-int ConverterTool::checkGPU() {
+bool ConverterTool::isGPUEnable() {
     float scale_factor = 1.0f;
-    int v210Size = g_ctx->img_rowByte * g_ctx->img_height;
+    v210Size = ((7680 + 47) / 48 * 128 / 2) * 4320;
 
     if ((device_sync_method = getCmdLineArgumentInt(argc, (const char **)argv, "sync_method")) >= 0) {
         if (device_sync_method == 0 || device_sync_method == 1 || device_sync_method == 2 || device_sync_method == 4) {
@@ -91,11 +105,11 @@ int ConverterTool::checkGPU() {
         }
         else {
             cout << "Invalid command line option sync_method=\"" << device_sync_method << "\\\n";
-            return EXIT_FAILURE;
+            return false;
         }
     }
     else {
-        return EXIT_SUCCESS;
+        return false;
     }
     if (checkCmdLineFlag(argc, (const char **)argv, "use_generic_memory")) {
 #if defined(__APPLE__) || defined(MACOSX)
@@ -118,13 +132,13 @@ int ConverterTool::checkGPU() {
 
     if (0 == num_devices) {
         printf("your system does not have a CUDA capable device, waiving test...\n");
-        return EXIT_WAIVED;
+        return false;
     }
 
     // check if the command-line chosen device ID is within range, exit if not
     if (g_ctx->device >= num_devices) {
         printf("cuda_device=%d is invalid, must choose device ID between 0 and %d\n", g_ctx->device, num_devices - 1);
-        return EXIT_FAILURE;
+        return false;
     }
 
     checkCudaErrors(cudaSetDevice(g_ctx->device));
@@ -159,6 +173,7 @@ int ConverterTool::checkGPU() {
 
     // enable use of blocking sync, to reduce CPU usage
     printf("> Using CPU/GPU Device Synchronization method (%s)\n", sDeviceSyncMethod[device_sync_method]);
+    return true;
 }
 
 inline void AllocateHostMemory(bool bPinGenericMemory, unsigned short **pp_a, unsigned short **ppAligned_a, int nbytes) {
@@ -201,7 +216,7 @@ inline void AllocateHostMemory(bool bPinGenericMemory, unsigned char **pp_a, uns
         *pp_a = (unsigned char *)VirtualAlloc(NULL, (nbytes + MEMORY_ALIGNMENT), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 #else
         cout << "> mmap() allocating " << (float)nbytes / 1048576.0f << " Mbytes (generic page-aligned system memory)\n";
-        *pp_a = (unsigned short *)mmap(NULL, (nbytes + MEMORY_ALIGNMENT), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+        *pp_a = (unsigned char *)mmap(NULL, (nbytes + MEMORY_ALIGNMENT), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
 #endif
         *ppAligned_a = (unsigned char *)ALIGN_UP(*pp_a, MEMORY_ALIGNMENT);
         cout << "> cudaHostRegister() registering " << (float)nbytes / 1048576.0f
@@ -292,7 +307,7 @@ void multiStream(unsigned short *d_src, char *argv, nv210_context_t *g_ctx, int 
     checkCudaErrors(cudaMalloc((void **)&dP210Device, p210Size * sizeof(unsigned short))); // pointers to data in the device memory
     checkCudaErrors(cudaEventRecord(start_event, 0));
     checkCudaErrors(cudaMemcpyAsync(dV210Device, d_src, v210Size * sizeof(unsigned short), cudaMemcpyHostToDevice, streams[0]));
-    convertToP210(dV210Device, dP210Device, g_ctx->img_rowByte, g_ctx->img_width, g_ctx->img_height, streams[0]);
+    convertToP208(dV210Device, dP210Device, g_ctx->img_rowByte, g_ctx->img_width, g_ctx->img_height, streams[0]);
     checkCudaErrors(cudaMemcpyAsync(dP210, dP210Device, p210Size * sizeof(unsigned short)   , cudaMemcpyDeviceToHost, streams[0]));
     checkCudaErrors(cudaEventRecord(stop_event, 0));
     checkCudaErrors(cudaEventSynchronize(stop_event));
@@ -308,7 +323,7 @@ void multiStream(unsigned short *d_src, char *argv, nv210_context_t *g_ctx, int 
         p210ByteOffset = p210Size * i / nStreams;
         checkCudaErrors(cudaMemcpyAsync(dV210Device + byteOffset, d_src + byteOffset,
             byteChunkSize, cudaMemcpyHostToDevice, streams[i]));
-        convertToP210(dV210Device + byteOffset, dP210Device + p210ByteOffset, g_ctx->img_rowByte,
+        convertToP208(dV210Device + byteOffset, dP210Device + p210ByteOffset, g_ctx->img_rowByte,
             g_ctx->img_width, g_ctx->img_height / nStreams, streams[i]);
         checkCudaErrors(cudaMemcpyAsync(dP210 + p210ByteOffset, dP210Device + p210ByteOffset,
             p210ByteChunkSize, cudaMemcpyDeviceToHost, streams[i]));
@@ -333,6 +348,19 @@ void multiStream(unsigned short *d_src, char *argv, nv210_context_t *g_ctx, int 
     checkCudaErrors(cudaEventDestroy(stop_event));
 }
 
+ConverterTool::ConverterTool() {
+	argc = 0;
+	argv = 0;
+	v210Size = 0;
+	nstreams = 1;
+	bPinGenericMemory = DEFAULT_PINNED_GENERIC_MEMORY; // we want this to be the default behavior
+	device_sync_method = cudaDeviceScheduleAuto; // by default we use BlockingSync
+	g_ctx = new nv210_context_t();
+#ifndef WIN32
+	en_params = new encode_params_t();
+#endif // !WIN32
+}
+
 ConverterTool::ConverterTool(int argcc, char **argvv) {
     argc = argcc;
     argv = argvv;
@@ -340,6 +368,10 @@ ConverterTool::ConverterTool(int argcc, char **argvv) {
     nstreams = 1;
     bPinGenericMemory = DEFAULT_PINNED_GENERIC_MEMORY; // we want this to be the default behavior
     device_sync_method = cudaDeviceScheduleAuto; // by default we use BlockingSync
+    g_ctx = new nv210_context_t();
+#ifndef WIN32
+    en_params = new encode_params_t();
+#endif // !WIN32
 }
 
 ConverterTool::~ConverterTool() {
@@ -347,13 +379,7 @@ ConverterTool::~ConverterTool() {
     destroyCudaEvent();
 }
 
-int ConverterTool::preprocess() {
-    //g_ctx = (nv210_context_t *)malloc(sizeof(nv210_context_t));
-    g_ctx = new nv210_context_t();
-    if (parseCmdLine(argc, argv, g_ctx) < 0) {
-        return EXIT_FAILURE;
-    }
-    checkGPU();
+void ConverterTool::initialCuda() {
     checkCudaErrors(cudaSetDeviceFlags(device_sync_method | (bPinGenericMemory ? cudaDeviceMapHost : 0)));
     // allocate and initialize an array of stream handles
     int eventflags = ((device_sync_method == cudaDeviceBlockingSync) ? cudaEventBlockingSync : cudaEventDefault);
@@ -364,22 +390,80 @@ int ConverterTool::preprocess() {
     for (int i = 0; i < nstreams; i++) {
         checkCudaErrors(cudaStreamCreate(&(streams[i])));
     }
+#ifndef WIN32
+    // initialize nvjpeg structures
+    checkCudaErrors(nvjpegCreateSimple(&en_params->nv_handle));
+    checkCudaErrors(nvjpegEncoderStateCreate(en_params->nv_handle, &en_params->nv_enc_state, streams[0]));
+    checkCudaErrors(nvjpegEncoderParamsCreate(en_params->nv_handle, &en_params->nv_enc_params, streams[0]));
+#endif // !WIN32
+}
+
+#ifndef WIN32
+void ConverterTool::convertToP208ThenResize(unsigned short *src, int nSrcW, int nSrcH,
+    unsigned char *p208Dst, int nDstW, int nDstH, int *nJPEGSize) {
+    int rowByte = (nSrcW + 47) / 48 * 128 / 2;
+    size_t length = 0;
+
+    checkCudaErrors(nvjpegEncoderParamsSetSamplingFactors(en_params->nv_enc_params, NVJPEG_CSS_422, streams[0]));
+
+    checkCudaErrors(cudaMalloc((void **)&en_params->t_16, rowByte * nSrcH * sizeof(unsigned short)));
+    en_params->nv_image.pitch[0] = nDstW * sizeof(unsigned char);
+    en_params->nv_image.pitch[1] = nDstW / 2 * sizeof(unsigned char);
+    en_params->nv_image.pitch[2] = nDstW / 2 * sizeof(unsigned char);
+    checkCudaErrors(cudaMalloc(&en_params->nv_image.channel[0], nDstW * nDstH * sizeof(unsigned char)));
+    checkCudaErrors(cudaMalloc(&en_params->nv_image.channel[1], nDstW * nDstH / 2 * sizeof(unsigned char)));
+    checkCudaErrors(cudaMalloc(&en_params->nv_image.channel[2], nDstW * nDstH / 2 * sizeof(unsigned char)));
+
+    checkCudaErrors(
+        cudaMemcpy((void *)en_params->t_16, (void *)src, rowByte * nSrcH * sizeof(unsigned short), cudaMemcpyHostToDevice));
+    resizeBatch(en_params->t_16, rowByte, nSrcH,
+        en_params->nv_image.channel[0], en_params->nv_image.channel[1], en_params->nv_image.channel[2],
+        nDstW, nDstH, lookupTable_cuda, streams[0]);
+
+    checkCudaErrors(nvjpegEncodeYUV(en_params->nv_handle, en_params->nv_enc_state, en_params->nv_enc_params,
+        &en_params->nv_image, NVJPEG_CSS_422, nDstW, nDstH, streams[0]));
+
+    checkCudaErrors(cudaStreamSynchronize(streams[0]));
+    // get compressed stream size
+    checkCudaErrors(
+        nvjpegEncodeRetrieveBitstream(en_params->nv_handle, en_params->nv_enc_state, NULL, &length, streams[0]));
+
+    // get stream itself
+    checkCudaErrors(cudaStreamSynchronize(streams[0]));
+    vector<unsigned char> jpeg(length);
+    checkCudaErrors(
+        nvjpegEncodeRetrieveBitstream(en_params->nv_handle, en_params->nv_enc_state, jpeg.data(), &length, streams[0]));
+
+    // write stream to file
+    checkCudaErrors(cudaStreamSynchronize(streams[0]));
+    memcpy(p208Dst, jpeg.data(), length);
+    *nJPEGSize = length;
+}
+
+void ConverterTool::testFunction() {
+    unsigned char *p208;
+    p208 = new unsigned char[1280 * 720 * 2];
+    int nJPEGSize = 0;
+    convertToP208ThenResize(v210Src, 7680, 4320, p208, 1280, 720, &nJPEGSize);
+    ofstream output_file("r.jpg", ios::out | ios::binary);
+    output_file.write((char *)p208, nJPEGSize);
+    output_file.close();
+    delete[] p208;
+}
+#endif // !WIN32
+
+int ConverterTool::preprocess() {
+    if (parseCmdLine(g_ctx) < 0) {
+        return EXIT_FAILURE;
+    }
 
     v210Size = g_ctx->img_rowByte * g_ctx->img_height;
     // Allocate Host memory (could be using cudaMallocHost or VirtualAlloc/mmap if using the new CUDA 4.0 features
     AllocateHostMemory(bPinGenericMemory, &v210Src, &v210SrcAligned, v210Size * sizeof(unsigned short));
-    lookupTable = new int[1024];
 
     cudaStatus = cudaMalloc((void**)&dev_v210Src, v210Size * sizeof(unsigned short));
     if (cudaStatus != cudaSuccess) {
         cerr << "dev_v210Src cudaMalloc failed!\n";
-        freeMemory();
-        return EXIT_FAILURE;
-    }
-
-    cudaStatus = cudaMalloc((void**)&lookupTable_cuda, sizeof(int) * 1024);
-    if (cudaStatus != cudaSuccess) {
-        cerr << "lookupTable_cuda cudaMalloc failed!\n";
         freeMemory();
         return EXIT_FAILURE;
     }
@@ -493,6 +577,7 @@ void ConverterTool::resizeThenConvertToRGB(unsigned char *rgb_8bit) {
         << " --> " << g_ctx->img_width << "x" << g_ctx->img_height << "), "
         << "average time: " << (elapsed_time / (TEST_LOOP * 1.0f)) << " ms/frame\n";
     rgb_8bit = rgb8bit;
+    bmp_w("r.jpg", g_ctx->dst_width, g_ctx->dst_height, g_ctx->dst_width * g_ctx->dst_height * RGB_SIZE, rgb_8bit);
     checkCudaErrors(cudaMemcpyAsync(dev_displayRGB8bit, dev_rgb8bit, rgb8bitSize * sizeof(unsigned char),
         cudaMemcpyDeviceToDevice, streams[0]));
 Error:
@@ -544,6 +629,13 @@ void ConverterTool::freeMemory() {
     checkCudaErrors(cudaFree(dev_v210Src));
     FreeHostMemory(bPinGenericMemory, &v210Src, &v210SrcAligned, v210Size * sizeof(unsigned short));
     delete g_ctx;
+
+#ifndef WIN32
+    checkCudaErrors(cudaFree(en_params->t_16));
+    checkCudaErrors(cudaFree(en_params->nv_image.channel[0]));
+    checkCudaErrors(cudaFree(en_params->nv_image.channel[1]));
+    checkCudaErrors(cudaFree(en_params->nv_image.channel[2]));
+#endif // !WIN32
 }
 
 void ConverterTool::destroyCudaEvent() {
@@ -553,4 +645,11 @@ void ConverterTool::destroyCudaEvent() {
     delete[] streams;
     checkCudaErrors(cudaEventDestroy(start_event));
     checkCudaErrors(cudaEventDestroy(stop_event));
+
+#ifndef WIN32
+    checkCudaErrors(nvjpegDestroy(en_params->nv_handle));
+    checkCudaErrors(nvjpegEncoderStateDestroy(en_params->nv_enc_state));
+    checkCudaErrors(nvjpegEncoderParamsDestroy(en_params->nv_enc_params));
+    delete en_params;
+#endif // !WIN32
 }

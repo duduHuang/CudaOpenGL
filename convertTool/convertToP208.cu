@@ -1,9 +1,9 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include "convertToP210.h"
+#include "convertToP208.h"
 
-__global__ static void convertToP210Kernel(uint16_t *pV210, uint16_t *dP210, int nPitch, int nWidth, int nHeight) {
+__global__ static void convertToP208Kernel(uint16_t *pV210, uint16_t *dP208, int nPitch, int nWidth, int nHeight) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     int tidd = blockIdx.y * blockDim.y + threadIdx.y;
     uint32_t v0, y0, u0, y2, u1, y1, u2, y3, v1, y5, v2, y4;
@@ -33,26 +33,26 @@ __global__ static void convertToP210Kernel(uint16_t *pV210, uint16_t *dP210, int
 
         k = tid * 6;
         j = tidd * nPitch * 3 / 4;
-        dP210[j + k + 0] = y0;
-        dP210[j + k + 1] = y1;
-        dP210[j + k + 2] = y2;
-        dP210[j + k + 3] = y3;
-        dP210[j + k + 4] = y4;
-        dP210[j + k + 5] = y5;
+        dP208[j + k + 0] = y0;
+        dP208[j + k + 1] = y1;
+        dP208[j + k + 2] = y2;
+        dP208[j + k + 3] = y3;
+        dP208[j + k + 4] = y4;
+        dP208[j + k + 5] = y5;
         k = tid * 3;
         j = tidd * nPitch * 3 / 8 + nWidth * nHeight;
-        dP210[j + k + 0] = u0;
-        dP210[j + k + 1] = u1;
-        dP210[j + k + 2] = u2;
+        dP208[j + k + 0] = u0;
+        dP208[j + k + 1] = u1;
+        dP208[j + k + 2] = u2;
         j = tidd * nPitch * 3 / 8 + nWidth * nHeight * 3 / 2;
-        dP210[j + k + 0] = v0;
-        dP210[j + k + 1] = v1;
-        dP210[j + k + 2] = v2;
+        dP208[j + k + 0] = v0;
+        dP208[j + k + 1] = v1;
+        dP208[j + k + 2] = v2;
     }
 }
 
-void convertToP210(uint16_t *pV210, uint16_t *dP210, int nPitch, int nWidth, int nHeight, cudaStream_t stream) {
+void convertToP208(uint16_t *pV210, uint16_t *dP208, int nPitch, int nWidth, int nHeight, cudaStream_t stream) {
     dim3 blocks(32, 16, 1);
     dim3 grids((nPitch + blocks.x - 1) / blocks.x, (nHeight + blocks.y - 1) / blocks.y, 1);
-    convertToP210Kernel << < grids, blocks, 0, stream >> > (pV210, dP210, nPitch, nWidth, nHeight);
+    convertToP208Kernel << < grids, blocks, 0, stream >> > (pV210, dP208, nPitch, nWidth, nHeight);
 }
