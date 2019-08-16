@@ -63,7 +63,7 @@ private:
     int argc, v210Size, nstreams;
     char **argv;
     unsigned short *v210Src, *v210SrcAligned, *dev_v210Src;
-    unsigned char *dev_displayRGB8bit;
+    unsigned char *dev_display8bit;
     nv210_context_t *g_ctx;
 #ifndef WIN32
     encode_params_t *en_params;
@@ -90,6 +90,7 @@ public:
     void convertToRGBThenResize(unsigned char *rgb_8bit);
     void resizeThenConvertToRGB(unsigned char *rgb_8bit);
     void convertToP208ThenResize(unsigned char *p208);
+	void callNppTest();
     void display();
     void freeMemory();
     void destroyCudaEvent();

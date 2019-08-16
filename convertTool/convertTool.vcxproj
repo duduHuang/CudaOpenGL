@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="convertTool.cpp" />
+    <ClCompile Include="nppTest.cpp" />
     <ClCompile Include="nvGL.cpp" />
     <ClCompile Include="writeFile.cpp" />
   </ItemGroup>
@@ -21,6 +22,7 @@
     <ClInclude Include="convertToRGB.h" />
     <ClInclude Include="convertTool.h" />
     <ClInclude Include="mapToGL.h" />
+    <ClInclude Include="nppTest.h" />
     <ClInclude Include="nvGL.h" />
     <ClInclude Include="nvjpeg.h" />
     <ClInclude Include="resize.h" />
@@ -72,12 +74,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(CUDA_SDK_PATH)/common/inc;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(CudaToolkitIncludeDir);$(CUDA_SDK_PATH)/common/inc;$(CUDA_SDK_PATH)/7_CUDALibraries/common/UtilNPP;$(CUDA_SDK_PATH)/7_CUDALibraries/common/FreeImage/include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>cudart_static.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;glew64.lib;nppisu.lib;nppicom.lib;nppig.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(CUDA_SDK_PATH)\common\inc;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CudaCompile>

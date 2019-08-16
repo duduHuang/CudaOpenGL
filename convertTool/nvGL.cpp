@@ -212,6 +212,11 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/) {
 void reshape(int w, int h) {
     window_width = w;
     window_height = h;
+	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(60, (GLfloat)w / (GLfloat)h, 1.0, 100.0);
+	glMatrixMode(GL_MODELVIEW);
 }
 
 #ifdef USE_TEXSUBIMAGE2D
@@ -338,7 +343,7 @@ void runStdProgram(int argc, char **argv, unsigned char *disData, int nWidth, in
     // register callbacks
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
-    //glutReshapeFunc(reshape);
+    glutReshapeFunc(reshape);
     glutTimerFunc(REFRESH_DELAY, timerEvent, 0);
 
     initGLBuffers();

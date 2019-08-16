@@ -3,14 +3,10 @@
 #include "convertToRGB.h"
 #include "resize.h"
 #include "writeFile.h"
+#include "nppTest.h"
 #ifdef WIN32
 #include "nvGL.h"
 #endif // !WIN32
-#ifndef WIN32
-// if not define function, it will build failed on linux system,
-void runStdProgram(int argc, char **argv, unsigned char *disData, int nWidth, int nHeight, int nBytes);
-#endif // !WIN32
-
 
 static const char *sSyncMethod[] = {
     "0 (Automatic Blocking)",
@@ -43,6 +39,7 @@ int parseCmdLine(nv210_context_t *g_ctx) {
     g_ctx->img_rowByte = (7680 + 47) / 48 * 128 / 2;
     g_ctx->img_height = 4320;
     g_ctx->batch = 1;
+#ifdef WIN32
     cout << "Output resolution: (7680 4320)\n"
         << "                   (3840 2160)\n"
         << "                   (1920 1080)\n"
@@ -52,6 +49,7 @@ int parseCmdLine(nv210_context_t *g_ctx) {
         istringstream ss(s);
         ss >> w >> h;
     }
+#endif // WIN32
     g_ctx->dst_width = w;
     g_ctx->dst_height = h;
     if (g_ctx->img_width == 0 || g_ctx->img_height == 0 || !g_ctx->input_v210_file) {
@@ -80,12 +78,7 @@ static int loadV210Frame(unsigned short *dSrc, nv210_context_t *g_ctx) {
 void ConverterTool::lookupTableF() {
     lookupTable = new int[1024];
 
-    cudaStatus = cudaMalloc((void**)&lookupTable_cuda, sizeof(int) * 1024);
-    if (cudaStatus != cudaSuccess) {
-        cerr << "lookupTable_cuda cudaMalloc failed!\n";
-        freeMemory();
-        return;
-    }
+    checkCudaErrors(cudaMalloc((void**)&lookupTable_cuda, sizeof(int) * 1024));
 
     for (int i = 0; i < 1024; ++i) {
         lookupTable[i] = round(i * 0.249);
@@ -349,15 +342,15 @@ void multiStream(unsigned short *d_src, char *argv, nv210_context_t *g_ctx, int 
 }
 
 ConverterTool::ConverterTool() {
-	argc = 0;
-	argv = 0;
-	v210Size = 0;
-	nstreams = 1;
-	bPinGenericMemory = DEFAULT_PINNED_GENERIC_MEMORY; // we want this to be the default behavior
-	device_sync_method = cudaDeviceScheduleAuto; // by default we use BlockingSync
-	g_ctx = new nv210_context_t();
+    argc = 0;
+    argv = 0;
+    v210Size = 0;
+    nstreams = 1;
+    bPinGenericMemory = DEFAULT_PINNED_GENERIC_MEMORY; // we want this to be the default behavior
+    device_sync_method = cudaDeviceScheduleAuto; // by default we use BlockingSync
+    g_ctx = new nv210_context_t();
 #ifndef WIN32
-	en_params = new encode_params_t();
+    en_params = new encode_params_t();
 #endif // !WIN32
 }
 
@@ -407,6 +400,7 @@ void ConverterTool::convertToP208ThenResize(unsigned short *src, int nSrcW, int 
     checkCudaErrors(nvjpegEncoderParamsSetSamplingFactors(en_params->nv_enc_params, NVJPEG_CSS_422, streams[0]));
 
     checkCudaErrors(cudaMalloc((void **)&en_params->t_16, rowByte * nSrcH * sizeof(unsigned short)));
+
     en_params->nv_image.pitch[0] = nDstW * sizeof(unsigned char);
     en_params->nv_image.pitch[1] = nDstW / 2 * sizeof(unsigned char);
     en_params->nv_image.pitch[2] = nDstW / 2 * sizeof(unsigned char);
@@ -504,7 +498,7 @@ void ConverterTool::convertToRGBThenResize(unsigned char *rgb_8bit) {
         goto Error;
     }
 
-    cudaStatus = cudaMalloc((void**)&dev_displayRGB8bit, rgb8bitSize * sizeof(unsigned char));
+    cudaStatus = cudaMalloc((void**)&dev_display8bit, rgb8bitSize * sizeof(unsigned char));
     if (cudaStatus != cudaSuccess) {
         cerr << "dev_rgb8bit cudaMalloc failed!\n";
         goto Error;
@@ -524,7 +518,7 @@ void ConverterTool::convertToRGBThenResize(unsigned char *rgb_8bit) {
         << g_ctx->img_width << "x" << g_ctx->img_height << "), "
         << "average time: " << (elapsed_time / (TEST_LOOP * 1.0f)) << " ms/frame\n";
     rgb_8bit = rgb8bit;
-    checkCudaErrors(cudaMemcpyAsync(dev_displayRGB8bit, dev_rgb8bit, rgb8bitSize * sizeof(unsigned char),
+    checkCudaErrors(cudaMemcpyAsync(dev_display8bit, dev_rgb8bit, rgb8bitSize * sizeof(unsigned char),
         cudaMemcpyDeviceToDevice, streams[0]));
 Error:
     cudaFree(dev_rgbDst);
@@ -556,9 +550,9 @@ void ConverterTool::resizeThenConvertToRGB(unsigned char *rgb_8bit) {
         goto Error;
     }
 
-    cudaStatus = cudaMalloc((void**)&dev_displayRGB8bit, rgb8bitSize * sizeof(unsigned char));
+    cudaStatus = cudaMalloc((void**)&dev_display8bit, rgb8bitSize * sizeof(unsigned char));
     if (cudaStatus != cudaSuccess) {
-        cerr << "dev_rgb8bit cudaMalloc failed!\n";
+        cerr << "dev_display8bit cudaMalloc failed!\n";
         goto Error;
     }
 
@@ -578,7 +572,7 @@ void ConverterTool::resizeThenConvertToRGB(unsigned char *rgb_8bit) {
         << "average time: " << (elapsed_time / (TEST_LOOP * 1.0f)) << " ms/frame\n";
     rgb_8bit = rgb8bit;
     bmp_w("r.jpg", g_ctx->dst_width, g_ctx->dst_height, g_ctx->dst_width * g_ctx->dst_height * RGB_SIZE, rgb_8bit);
-    checkCudaErrors(cudaMemcpyAsync(dev_displayRGB8bit, dev_rgb8bit, rgb8bitSize * sizeof(unsigned char),
+    checkCudaErrors(cudaMemcpyAsync(dev_display8bit, dev_rgb8bit, rgb8bitSize * sizeof(unsigned char),
         cudaMemcpyDeviceToDevice, streams[0]));
 Error:
     cudaFree(dev_p210Dst);
@@ -594,9 +588,16 @@ void ConverterTool::convertToP208ThenResize(unsigned char *o_p208) {
 
     // Allocate Host memory (could be using cudaMallocHost or VirtualAlloc/mmap if using the new CUDA 4.0 features
     AllocateHostMemory(bPinGenericMemory, &p208, &p208Aligned, p208Size * sizeof(unsigned char));
+
     cudaStatus = cudaMalloc((void**)&dev_p208, p208Size * sizeof(unsigned char));
     if (cudaStatus != cudaSuccess) {
-        cerr << "dev_rgb8bit cudaMalloc failed!\n";
+        cerr << "dev_p208 cudaMalloc failed!\n";
+        goto Error;
+    }
+
+    cudaStatus = cudaMalloc((void**)&dev_display8bit, p208Size * sizeof(unsigned char));
+    if (cudaStatus != cudaSuccess) {
+        cerr << "dev_display8bit cudaMalloc failed!\n";
         goto Error;
     }
 
@@ -611,15 +612,17 @@ void ConverterTool::convertToP208ThenResize(unsigned char *o_p208) {
     cout << fixed << "  CUDA v210 resize and convert to rgb 8 bit type(" << g_ctx->img_width << "x" << g_ctx->img_height
         << " --> " << g_ctx->img_width << "x" << g_ctx->img_height << "), "
         << "average time: " << (elapsed_time / (TEST_LOOP * 1.0f)) << " ms/frame\n";
-
+    o_p208 = p208;
 Error:
     cudaFree(dev_p208);
     FreeHostMemory(bPinGenericMemory, &p208, &p208Aligned, p208Size * sizeof(unsigned char));
 }
 
 void ConverterTool::display() {
-    runStdProgram(argc, argv, dev_displayRGB8bit, g_ctx->dst_width, g_ctx->dst_height,
+#ifdef  WIN32
+    runStdProgram(argc, argv, dev_display8bit, g_ctx->dst_width, g_ctx->dst_height,
         g_ctx->dst_width * g_ctx->dst_height * RGB_SIZE);
+#endif // ! WIN32
 }
 
 void ConverterTool::freeMemory() {
@@ -627,6 +630,7 @@ void ConverterTool::freeMemory() {
     checkCudaErrors(cudaFree(lookupTable_cuda));
     delete[] lookupTable;
     checkCudaErrors(cudaFree(dev_v210Src));
+    checkCudaErrors(cudaFree(dev_display8bit));
     FreeHostMemory(bPinGenericMemory, &v210Src, &v210SrcAligned, v210Size * sizeof(unsigned short));
     delete g_ctx;
 
@@ -647,9 +651,66 @@ void ConverterTool::destroyCudaEvent() {
     checkCudaErrors(cudaEventDestroy(stop_event));
 
 #ifndef WIN32
-    checkCudaErrors(nvjpegDestroy(en_params->nv_handle));
     checkCudaErrors(nvjpegEncoderStateDestroy(en_params->nv_enc_state));
     checkCudaErrors(nvjpegEncoderParamsDestroy(en_params->nv_enc_params));
+    checkCudaErrors(nvjpegDestroy(en_params->nv_handle));
     delete en_params;
 #endif // !WIN32
+}
+
+void ConverterTool::callNppTest() {
+    nppTest *nT = new nppTest();
+    nT->nppTestSetType(RGB_SIZE);
+    nT->nppTestSetSrcSize(g_ctx->img_width, g_ctx->img_height);
+    nT->nppTestSetDstSize(g_ctx->dst_width, g_ctx->dst_height);
+    nT->nppTestInitial();
+
+    unsigned char *dev_rgbDst, *dev_rgb8bit, *rgb8bit, *rgb8bitAligned;
+    int rgbSize = g_ctx->img_width * g_ctx->img_height * RGB_SIZE,
+        rgb8bitSize = g_ctx->dst_width * g_ctx->dst_height * RGB_SIZE;
+    float elapsed_time = 0.0f;
+
+    // Allocate Host memory (could be using cudaMallocHost or VirtualAlloc/mmap if using the new CUDA 4.0 features
+    AllocateHostMemory(bPinGenericMemory, &rgb8bit, &rgb8bitAligned, rgb8bitSize * sizeof(unsigned char));
+
+    cudaStatus = cudaMalloc((void**)&dev_rgbDst, rgbSize * sizeof(unsigned char));
+    if (cudaStatus != cudaSuccess) {
+        cerr << "dev_rgbDst cudaMalloc failed!\n";
+        cerr << "CUDA error at " << cudaGetErrorName(cudaStatus) << "\n";
+        goto Error;
+    }
+
+    cudaStatus = cudaMalloc((void**)&dev_rgb8bit, rgb8bitSize * sizeof(unsigned char));
+    if (cudaStatus != cudaSuccess) {
+        cerr << "dev_rgb8bit cudaMalloc failed!\n";
+        goto Error;
+    }
+
+    cudaStatus = cudaMalloc((void**)&dev_display8bit, rgb8bitSize * sizeof(unsigned char));
+    if (cudaStatus != cudaSuccess) {
+        cerr << "dev_display8bit cudaMalloc failed!\n";
+        goto Error;
+    }
+
+    checkCudaErrors(cudaEventRecord(start_event, 0));
+    convertToRGBNpp(dev_v210Src, dev_rgbDst, g_ctx->img_rowByte, g_ctx->img_width, g_ctx->img_height,
+        lookupTable_cuda, streams[0]);
+    nT->nppTestSetSrcData(dev_rgbDst);
+    nT->nppTestProcess(dev_rgb8bit);
+    checkCudaErrors(
+        cudaMemcpyAsync(rgb8bit, dev_rgb8bit, rgb8bitSize * sizeof(unsigned char), cudaMemcpyDeviceToHost, streams[0]));
+    checkCudaErrors(cudaEventRecord(stop_event, 0));
+    checkCudaErrors(cudaEventSynchronize(stop_event));
+    checkCudaErrors(cudaEventElapsedTime(&elapsed_time, start_event, stop_event));
+
+    bmp_w("r.jpg", g_ctx->dst_width, g_ctx->dst_height, g_ctx->dst_width * g_ctx->dst_height * RGB_SIZE, rgb8bit);
+    checkCudaErrors(cudaMemcpyAsync(dev_display8bit, dev_rgb8bit, rgb8bitSize * sizeof(unsigned char),
+        cudaMemcpyDeviceToDevice, streams[0]));
+
+Error:
+    cudaFree(dev_rgbDst);
+    cudaFree(dev_rgb8bit);
+    FreeHostMemory(bPinGenericMemory, &rgb8bit, &rgb8bitAligned, rgb8bitSize * sizeof(unsigned char));
+    nT->nppTestDestroy();
+    delete nT;
 }

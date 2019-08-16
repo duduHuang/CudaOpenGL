@@ -8,20 +8,24 @@ int main(int argc, char* argv[]) {
     ConverterTool *converterTool;
     converterTool = new ConverterTool();
     if (converterTool->isGPUEnable()) {
-#ifdef WIN32
+#if defined WIN32
         cout << "device has cuda !!!\n";
         converterTool->initialCuda();
         converterTool->preprocess();
         converterTool->lookupTableF();
         //converterTool->convertToRGBThenResize(r);
-        converterTool->resizeThenConvertToRGB(r);
-        converterTool->display();
-#endif // !WIN32
-#ifndef WIN32
+        //converterTool->resizeThenConvertToRGB(r);
+		//converterTool->convertToP208ThenResize(r);
+		converterTool->callNppTest();
+		converterTool->display();
+#else
         int i = 1;
         converterTool->initialCuda();
-        converterTool->preprocess();
         converterTool->lookupTableF();
+		converterTool->setSrcSize(7680, 4320);
+		converterTool->setDstSize(1280, 720);
+		converterTool->preprocess();
+		converterTool->allocateMem();
         while (i) {
             converterTool->testFunction();
             cout << "continue ? ";

@@ -11,6 +11,7 @@
     <ClCompile Include="convertTool.cpp" />
     <ClCompile Include="nvGL.cpp" />
     <ClCompile Include="writeFile.cpp" />
+    <ClCompile Include="nppTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="convertToRGB.h" />
@@ -21,5 +22,6 @@
     <ClInclude Include="nvjpeg.h" />
     <ClInclude Include="mapToGL.h" />
     <ClInclude Include="convertToP208.h" />
+    <ClInclude Include="nppTest.h" />
   </ItemGroup>
 </Project>
