@@ -13,19 +13,19 @@ int main(int argc, char* argv[]) {
         converterTool->initialCuda();
         converterTool->preprocess();
         converterTool->lookupTableF();
-        //converterTool->convertToRGBThenResize(r);
+        converterTool->convertToRGBThenResize(r);
         //converterTool->resizeThenConvertToRGB(r);
-		//converterTool->convertToP208ThenResize(r);
-		converterTool->callNppTest();
-		converterTool->display();
+        //converterTool->convertToP208ThenResize(r);
+        //converterTool->callNppTest();
+        converterTool->display();
 #else
         int i = 1;
         converterTool->initialCuda();
         converterTool->lookupTableF();
-		converterTool->setSrcSize(7680, 4320);
-		converterTool->setDstSize(1280, 720);
-		converterTool->preprocess();
-		converterTool->allocateMem();
+        converterTool->setSrcSize(7680, 4320);
+        converterTool->setDstSize(1280, 720);
+        converterTool->preprocess();
+        converterTool->allocateMem();
         while (i) {
             converterTool->testFunction();
             cout << "continue ? ";
