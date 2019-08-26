@@ -5,6 +5,7 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
     unsigned char *r = new unsigned char[1280 * 720 * 3];
+	unsigned short *v = new unsigned short[(7680 + 47) / 48 * 128 * 4320];
     ConverterTool *converterTool;
     converterTool = new ConverterTool();
     if (converterTool->isGPUEnable()) {
@@ -13,11 +14,12 @@ int main(int argc, char* argv[]) {
         converterTool->initialCuda();
         converterTool->preprocess();
         converterTool->lookupTableF();
-        converterTool->convertToRGBThenResize(r);
+		converterTool->convertToV210(v);
+        //converterTool->convertToRGBThenResize(r);
         //converterTool->resizeThenConvertToRGB(r);
         //converterTool->convertToP208ThenResize(r);
         //converterTool->callNppTest();
-        converterTool->display();
+        //converterTool->display();
 #else
         int i = 1;
         converterTool->initialCuda();
@@ -39,5 +41,6 @@ int main(int argc, char* argv[]) {
     converterTool->freeMemory();
     converterTool->destroyCudaEvent();
     delete[] r;
+	delete[] v;
     return 0;
 }

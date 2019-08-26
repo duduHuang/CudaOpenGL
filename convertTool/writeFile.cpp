@@ -25,11 +25,20 @@ void bmp_w(char *cFileName, int nWidth, int nHeight, int nSize, unsigned char *d
     ofile.close();
 }
 
-void dumpYUV(unsigned char *d_srcNv12, int width, int height, string filename, int coloer_space) {
-    int size = width * height * coloer_space * sizeof(unsigned char);
+void dumpYUV(unsigned short *d_srcNv12, int width, int height, string filename) {
+    int size = width * height * sizeof(unsigned short);
     ofstream nv12File(filename, ostream::out | ostream::binary);
     if (nv12File) {
         nv12File.write((char *)d_srcNv12, size);
         nv12File.close();
     }
+}
+
+void dumpRGB(unsigned char *dSrc, int w, int h, string fileName) {
+	int size = w * h * 3 * sizeof(unsigned char);
+	ofstream nv12File(fileName, ostream::out | ostream::binary);
+	if (nv12File) {
+		nv12File.write((char *)dSrc, size);
+		nv12File.close();
+	}
 }

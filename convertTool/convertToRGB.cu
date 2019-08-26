@@ -18,22 +18,22 @@ __global__ static void convertToRGBKernel(const uint16_t *pV210, uint16_t *tt, i
         pF.w = (uint32_t)pV210[j + k + 6] + ((uint32_t)pV210[j + k + 7] << 16);
 
         v0 = (uint32_t)((pF.x & 0x3FF00000) >> 20);
-        y0 = (uint32_t)((pF.x & 0x000FFC00) >> 10) * 1164;
+        y0 = (uint32_t)((pF.x & 0x000FFC00) >> 10) * 1000;
         u0 = (uint32_t)(pF.x & 0x000003FF);
-        y2 = (uint32_t)((pF.y & 0x3FF00000) >> 20) * 1164;
+        y2 = (uint32_t)((pF.y & 0x3FF00000) >> 20) * 1000;
         u1 = (uint32_t)((pF.y & 0x000FFC00) >> 10);
-        y1 = (uint32_t)(pF.y & 0x000003FF) * 1164;
+        y1 = (uint32_t)(pF.y & 0x000003FF) * 1000;
         u2 = (uint32_t)((pF.z & 0x3FF00000) >> 20);
-        y3 = (uint32_t)((pF.z & 0x000FFC00) >> 10) * 1164;
+        y3 = (uint32_t)((pF.z & 0x000FFC00) >> 10) * 1000;
         v1 = (uint32_t)(pF.z & 0x000003FF);
-        y5 = (uint32_t)((pF.w & 0x3FF00000) >> 20) * 1164;
+        y5 = (uint32_t)((pF.w & 0x3FF00000) >> 20) * 1000;
         v2 = (uint32_t)((pF.w & 0x000FFC00) >> 10);
-        y4 = (uint32_t)(pF.w & 0x000003FF) * 1164;
+        y4 = (uint32_t)(pF.w & 0x000003FF) * 1000;
 
         k = tid * 18;
         j *= 9;
         j /= 4;
-        int r = 1596 * v0 - 891648, g = 813 * v0 + 392 * u0 - 542464, b = 2017 * u0 - 1107200;
+        int r = 1407 * v0 - 720384, g = 716 * v0 + 345 * u0 - 543232, b = 1779 * u0 - 910848;
         tt[j + k + 0] = (y0 + r) / 1000;
         tt[j + k + 1] = (y0 - g) / 1000;
         tt[j + k + 2] = (y0 + b) / 1000;
@@ -42,7 +42,7 @@ __global__ static void convertToRGBKernel(const uint16_t *pV210, uint16_t *tt, i
         tt[j + k + 4] = (y1 - g) / 1000;
         tt[j + k + 5] = (y1 + b) / 1000;
 
-        r = 1596 * v1 - 891648, g = 813 * v1 + 392 * u1 - 542464, b = 2017 * u1 - 1107200;
+        r = 1407 * v1 - 720384, g = 716 * v1 + 345 * u1 - 543232, b = 1779 * u1 - 910848;
         tt[j + k + 6] = (y2 + r) / 1000;
         tt[j + k + 7] = (y2 - g) / 1000;
         tt[j + k + 8] = (y2 + b) / 1000;
@@ -51,7 +51,7 @@ __global__ static void convertToRGBKernel(const uint16_t *pV210, uint16_t *tt, i
         tt[j + k + 10] = (y3 - g) / 1000;
         tt[j + k + 11] = (y3 + b) / 1000;
 
-        r = 1596 * v2 - 891648, g = 813 * v2 + 392 * u2 - 542464, b = 2017 * u2 - 1107200;
+        r = 1407 * v2 - 720384, g = 716 * v2 + 345 * u2 - 543232, b = 1779 * u2 - 910848;
         tt[j + k + 12] = (y4 + r) / 1000;
         tt[j + k + 13] = (y4 - g) / 1000;
         tt[j + k + 14] = (y4 + b) / 1000;
@@ -85,22 +85,22 @@ __global__ static void convertToRGBTestKernel(const uint16_t *pV210, uint8_t *tt
         pF.w = (uint32_t)pV210[j + k + 6] + ((uint32_t)pV210[j + k + 7] << 16);
 
         v0 = (uint32_t)((pF.x & 0x3FF00000) >> 20);
-        y0 = (uint32_t)((pF.x & 0x000FFC00) >> 10) * 1164;
+        y0 = (uint32_t)((pF.x & 0x000FFC00) >> 10) * 1000;
         u0 = (uint32_t)(pF.x & 0x000003FF);
-        y2 = (uint32_t)((pF.y & 0x3FF00000) >> 20) * 1164;
+        y2 = (uint32_t)((pF.y & 0x3FF00000) >> 20) * 1000;
         u1 = (uint32_t)((pF.y & 0x000FFC00) >> 10);
-        y1 = (uint32_t)(pF.y & 0x000003FF) * 1164;
+        y1 = (uint32_t)(pF.y & 0x000003FF) * 1000;
         u2 = (uint32_t)((pF.z & 0x3FF00000) >> 20);
-        y3 = (uint32_t)((pF.z & 0x000FFC00) >> 10) * 1164;
+        y3 = (uint32_t)((pF.z & 0x000FFC00) >> 10) * 1000;
         v1 = (uint32_t)(pF.z & 0x000003FF);
-        y5 = (uint32_t)((pF.w & 0x3FF00000) >> 20) * 1164;
+        y5 = (uint32_t)((pF.w & 0x3FF00000) >> 20) * 1000;
         v2 = (uint32_t)((pF.w & 0x000FFC00) >> 10);
-        y4 = (uint32_t)(pF.w & 0x000003FF) * 1164;
+        y4 = (uint32_t)(pF.w & 0x000003FF) * 1000;
 
         k = tid * 18;
         j *= 9;
         j /= 4;
-        int r = 1596 * v0 - 891648, g = 813 * v0 + 392 * u0 - 542464, b = 2017 * u0 - 1107200;
+        int r = 1407 * v0 - 720384, g = 716 * v0 + 345 * u0 - 543232, b = 1779 * u0 - 910848;
         tt[j + k + 0] = (y0 + r) * 0.249 / 1000;
         tt[j + k + 1] = (y0 - g) * 0.249 / 1000;
         tt[j + k + 2] = (y0 + b) * 0.249 / 1000;
@@ -109,7 +109,7 @@ __global__ static void convertToRGBTestKernel(const uint16_t *pV210, uint8_t *tt
         tt[j + k + 4] = (y1 - g) * 0.249 / 1000;
         tt[j + k + 5] = (y1 + b) * 0.249 / 1000;
 
-        r = 1596 * v1 - 891648, g = 813 * v1 + 392 * u1 - 542464, b = 2017 * u1 - 1107200;
+        r = 1407 * v1 - 720384, g = 716 * v1 + 345 * u1 - 543232, b = 1779 * u1 - 910848;
         tt[j + k + 6] = (y2 + r) * 0.249 / 1000;
         tt[j + k + 7] = (y2 - g) * 0.249 / 1000;
         tt[j + k + 8] = (y2 + b) * 0.249 / 1000;
@@ -118,7 +118,7 @@ __global__ static void convertToRGBTestKernel(const uint16_t *pV210, uint8_t *tt
         tt[j + k + 10] = (y3 - g) * 0.249 / 1000;
         tt[j + k + 11] = (y3 + b) * 0.249 / 1000;
 
-        r = 1596 * v2 - 891648, g = 813 * v2 + 392 * u2 - 542464, b = 2017 * u2 - 1107200;
+        r = 1407 * v2 - 720384, g = 716 * v2 + 345 * u2 - 543232, b = 1779 * u2 - 910848;
         tt[j + k + 12] = (y4 + r) * 0.249 / 1000;
         tt[j + k + 13] = (y4 - g) * 0.249 / 1000;
         tt[j + k + 14] = (y4 + b) * 0.249 / 1000;
@@ -155,22 +155,22 @@ __global__ static void convertVToRGBKernel(const uint16_t *pV210, uint8_t *tt1, 
         pF.w = (uint32_t)pV210[j + k + 6] + ((uint32_t)pV210[j + k + 7] << 16);
 
         v0 = (uint32_t)((pF.x & 0x3FF00000) >> 20);
-        y0 = (uint32_t)((pF.x & 0x000FFC00) >> 10) * 1164;
+        y0 = (uint32_t)((pF.x & 0x000FFC00) >> 10) * 1000;
         u0 = (uint32_t)(pF.x & 0x000003FF);
-        y2 = (uint32_t)((pF.y & 0x3FF00000) >> 20) * 1164;
+        y2 = (uint32_t)((pF.y & 0x3FF00000) >> 20) * 1000;
         u1 = (uint32_t)((pF.y & 0x000FFC00) >> 10);
-        y1 = (uint32_t)(pF.y & 0x000003FF) * 1164;
+        y1 = (uint32_t)(pF.y & 0x000003FF) * 1000;
         u2 = (uint32_t)((pF.z & 0x3FF00000) >> 20);
-        y3 = (uint32_t)((pF.z & 0x000FFC00) >> 10) * 1164;
+        y3 = (uint32_t)((pF.z & 0x000FFC00) >> 10) * 1000;
         v1 = (uint32_t)(pF.z & 0x000003FF);
-        y5 = (uint32_t)((pF.w & 0x3FF00000) >> 20) * 1164;
+        y5 = (uint32_t)((pF.w & 0x3FF00000) >> 20) * 1000;
         v2 = (uint32_t)((pF.w & 0x000FFC00) >> 10);
-        y4 = (uint32_t)(pF.w & 0x000003FF) * 1164;
+        y4 = (uint32_t)(pF.w & 0x000003FF) * 1000;
 
         k = tid * 18;
         j *= 9;
         j /= 4;
-        int r = 1596 * v0 - 891648, g = 813 * v0 + 392 * u0 - 542464, b = 2017 * u0 - 1107200;
+        int r = 1407 * v0 - 720384, g = 716 * v0 + 345 * u0 - 543232, b = 1779 * u0 - 910848;
         tt[0] = (y0 + r) / 1000;
         tt[1] = (y0 - g) / 1000;
         tt[2] = (y0 + b) / 1000;
@@ -187,7 +187,7 @@ __global__ static void convertVToRGBKernel(const uint16_t *pV210, uint8_t *tt1, 
         tt1[j + k + 4] = lookupTable[tt[4]];
         tt1[j + k + 5] = lookupTable[tt[5]];
 
-        r = 1596 * v1 - 891648, g = 813 * v1 + 392 * u1 - 542464, b = 2017 * u1 - 1107200;
+        r = 1407 * v1 - 720384, g = 716 * v1 + 345 * u1 - 543232, b = 1779 * u1 - 910848;
         tt[0] = (y2 + r) / 1000;
         tt[1] = (y2 - g) / 1000;
         tt[2] = (y2 + b) / 1000;
@@ -204,7 +204,7 @@ __global__ static void convertVToRGBKernel(const uint16_t *pV210, uint8_t *tt1, 
         tt1[j + k + 10] = lookupTable[tt[4]];
         tt1[j + k + 11] = lookupTable[tt[5]];
 
-        r = 1596 * v2 - 891648, g = 813 * v2 + 392 * u2 - 542464, b = 2017 * u2 - 1107200;
+        r = 1407 * v2 - 720384, g = 716 * v2 + 345 * u2 - 543232, b = 1779 * u2 - 910848;
         tt[0] = (y4 + r) / 1000;
         tt[1] = (y4 - g) / 1000;
         tt[2] = (y4 + b) / 1000;
@@ -234,8 +234,8 @@ __global__ static void convertPToRGBKernel(const uint16_t *dpSrc, uint8_t *tt1, 
     if (tid < nDstW && tidd < nDstH) {
         int k = tid * 2;
         int j = tidd * nSrcWidth;
-        y0 = (uint32_t)dpSrc[j + k + 0] * 1164;
-        y1 = (uint32_t)dpSrc[j + k + 1] * 1164;
+        y0 = (uint32_t)dpSrc[j + k + 0] * 1000;
+        y1 = (uint32_t)dpSrc[j + k + 1] * 1000;
         k = tid;
         j = tidd * nSrcWidth / 2 + nDstHeight * nSrcWidth;
         u0 = (uint32_t)dpSrc[j + k + 0];
@@ -244,7 +244,7 @@ __global__ static void convertPToRGBKernel(const uint16_t *dpSrc, uint8_t *tt1, 
 
         k = tid * 6;
         j = tidd * nDstWidth * 3;
-        int r = 1596 * v0 - 891648, g = 813 * v0 + 392 * u0 - 542464, b = 2017 * u0 - 1107200;
+        int r = 1407 * v0 - 720384, g = 716 * v0 + 345 * u0 - 543232, b = 1779 * u0 - 910848;
         tt[0] = (y0 + r) / 1000;
         tt[1] = (y0 - g) / 1000;
         tt[2] = (y0 + b) / 1000;
@@ -294,22 +294,22 @@ __global__ static void convertToNppiKernel(uint16_t *dSrc, uint8_t *dDst,
 		pF.w = (uint32_t)dSrc[j + k + 6] + ((uint32_t)dSrc[j + k + 7] << 16);
 
 		v0 = (uint32_t)((pF.x & 0x3FF00000) >> 20);
-		y0 = (uint32_t)((pF.x & 0x000FFC00) >> 10) * 1164;
+		y0 = (uint32_t)((pF.x & 0x000FFC00) >> 10) * 1000;
 		u0 = (uint32_t)(pF.x & 0x000003FF);
-		y2 = (uint32_t)((pF.y & 0x3FF00000) >> 20) * 1164;
+		y2 = (uint32_t)((pF.y & 0x3FF00000) >> 20) * 1000;
 		u1 = (uint32_t)((pF.y & 0x000FFC00) >> 10);
-		y1 = (uint32_t)(pF.y & 0x000003FF) * 1164;
+		y1 = (uint32_t)(pF.y & 0x000003FF) * 1000;
 		u2 = (uint32_t)((pF.z & 0x3FF00000) >> 20);
-		y3 = (uint32_t)((pF.z & 0x000FFC00) >> 10) * 1164;
+		y3 = (uint32_t)((pF.z & 0x000FFC00) >> 10) * 1000;
 		v1 = (uint32_t)(pF.z & 0x000003FF);
-		y5 = (uint32_t)((pF.w & 0x3FF00000) >> 20) * 1164;
+		y5 = (uint32_t)((pF.w & 0x3FF00000) >> 20) * 1000;
 		v2 = (uint32_t)((pF.w & 0x000FFC00) >> 10);
-		y4 = (uint32_t)(pF.w & 0x000003FF) * 1164;
+		y4 = (uint32_t)(pF.w & 0x000003FF) * 1000;
 
 		k = tid * 18;
 		j *= 9;
 		j /= 4;
-		int r = 1596 * v0 - 891648, g = 813 * v0 + 392 * u0 - 542464, b = 2017 * u0 - 1107200;
+		int r = 1407 * v0 - 720384, g = 716 * v0 + 345 * u0 - 543232, b = 1779 * u0 - 910848;
 		tt[0] = (y0 + r) / 1000;
 		tt[1] = (y0 - g) / 1000;
 		tt[2] = (y0 + b) / 1000;
@@ -326,7 +326,7 @@ __global__ static void convertToNppiKernel(uint16_t *dSrc, uint8_t *dDst,
 		dDst[j + k + 4] = lookupTable[tt[4]];
 		dDst[j + k + 5] = lookupTable[tt[5]];
 
-		r = 1596 * v1 - 891648, g = 813 * v1 + 392 * u1 - 542464, b = 2017 * u1 - 1107200;
+		r = 1407 * v1 - 720384, g = 716 * v1 + 345 * u1 - 543232, b = 1779 * u1 - 910848;
 		tt[0] = (y2 + r) / 1000;
 		tt[1] = (y2 - g) / 1000;
 		tt[2] = (y2 + b) / 1000;
@@ -343,7 +343,7 @@ __global__ static void convertToNppiKernel(uint16_t *dSrc, uint8_t *dDst,
 		dDst[j + k + 10] = lookupTable[tt[4]];
 		dDst[j + k + 11] = lookupTable[tt[5]];
 
-		r = 1596 * v2 - 891648, g = 813 * v2 + 392 * u2 - 542464, b = 2017 * u2 - 1107200;
+		r = 1407 * v2 - 720384, g = 716 * v2 + 345 * u2 - 543232, b = 1779 * u2 - 910848;
 		tt[0] = (y4 + r) / 1000;
 		tt[1] = (y4 - g) / 1000;
 		tt[2] = (y4 + b) / 1000;

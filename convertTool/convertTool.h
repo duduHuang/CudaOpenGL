@@ -90,6 +90,7 @@ public:
     void convertToRGBThenResize(unsigned char *rgb_8bit);
     void resizeThenConvertToRGB(unsigned char *rgb_8bit);
     void convertToP208ThenResize(unsigned char *p208);
+	void convertToV210(unsigned short *v210);
 	void callNppTest();
     void display();
     void freeMemory();
